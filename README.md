@@ -6,7 +6,8 @@ You'll have to install the following C libraries:
 - [stb](https://archlinux.org/packages/extra/any/stb/)
 
 Then, make sure you have gcc installed and run `make`
-Then you can use GLWall like this:
+
+Once compiled, you can use GLWall like this:
 `./GLWall <path_to_shader> [<path_to_texture>]`
 
 This will render the given shader to a window with the settings specified in `config.h`
