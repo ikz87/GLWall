@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <signal.h>
@@ -61,6 +62,51 @@ double mouseX = 0.0, mouseY = 0.0;
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     mouseX = xpos;
     mouseY = ypos;
+}
+
+// Load an image as a texture
+void load_texture(unsigned int *texture, char *path)
+{
+    glGenTextures(1, texture);
+    glBindTexture(GL_TEXTURE_2D, *texture);
+
+    // Set texture wrapping and filtering options
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Force loading the image with 4 channels (RGBA)
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, STBI_rgb_alpha);
+    if (data) {
+        // Ensure OpenGL expects 4 channels (RGBA)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+    } else {
+        fprintf(stderr, "Failed to load texture\n");
+    }
+    stbi_image_free(data);
+}
+
+// Function to check if a file has been modified since the last check
+int has_file_changed(const char *filename, time_t *last_mod_time) {
+    struct stat file_stat;
+
+    // Get file metadata
+    if (stat(filename, &file_stat) == -1) {
+        perror("stat");
+        return -1; // Error accessing the file
+    }
+
+    // Compare the current modification time with the last stored modification time
+    if (*last_mod_time != file_stat.st_mtime) {
+        *last_mod_time = file_stat.st_mtime;
+        return 1; // File has changed
+    }
+
+    return 0; // File has not changed
 }
 
 int main(int argc, char *argv[]) {
@@ -186,28 +232,22 @@ int main(int argc, char *argv[]) {
 
     // Load and create a texture
     unsigned int texture;
+    time_t last_mod_time;
+    struct stat file_stat;
+
     if (argc == 3)
     {
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-
-        // Set texture wrapping and filtering options
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        // Load image
-        int width, height, nrChannels;
-        unsigned char* data = stbi_load(argv[2], &width, &height, &nrChannels, 0);
-        if (data) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-        } else {
-            fprintf(stderr, "Failed to load texture\n");
+        load_texture(&texture, argv[2]);
+        // Get file metadata
+        if (stat(argv[2], &file_stat) == -1) {
+            perror("stat");
+            return -1; // Error accessing the file
         }
-        stbi_image_free(data);
+        last_mod_time = file_stat.st_mtime;
     }
+
+    // Keep track of changes to the file
+
 
 
     // Get the location of the uniform variables
@@ -294,6 +334,14 @@ int main(int argc, char *argv[]) {
 
             // Fraction of the day
             local_time = (float)total_seconds / seconds_in_day;
+
+            // Texture
+            if (REFRESH_TEXTURE && argc == 3 && has_file_changed(argv[2], &last_mod_time))
+            {
+                printf("Texture file changed, will reload\n");
+                load_texture(&texture, argv[2]);
+            }
+
         }
 
         // Pass the window width and time to the shaderglUniform3f(resolutionLocation, (float)width, (float)height, 1.0f);
