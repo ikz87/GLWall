@@ -283,10 +283,6 @@ int main(int argc, char *argv[]) {
         }
         clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 
-        // Input
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, 1);
-
         // Get window size
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
