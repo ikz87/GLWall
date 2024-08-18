@@ -269,6 +269,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     unsigned int delta_us = 0;
     double delta = delta_us;
+    float glfw_time = 0;
 
     // Some more miscellaneous vars for uniforms
     int battery_level = 0;
@@ -340,11 +341,21 @@ int main(int argc, char *argv[]) {
 
         }
 
-        // Pass the window width and time to the shaderglUniform3f(resolutionLocation, (float)width, (float)height, 1.0f);
+        // Keep GLFW time in a 60 second interval so it doesn't
+        // cause any floating point precision error thingies
+        // when the program is run for long periods of time
+        glfw_time = glfwGetTime();
+        if (glfw_time >= 60.0)
+        {
+            glfw_time = fmod(glfw_time, 60);
+            glfwSetTime(glfw_time);
+        }
+        
+        // Pass the window width and time to the shader
         glUniform3f(resolutionLocation, (float)width, (float)height, 1.0f);
         glUniform4f(mouseLocation, (float)mouseX, (float)mouseY, (float)0.0, (float)0.0);
-        glUniform1f(timeLocation, (float)glfwGetTime());
-        glUniform1f(timeDeltaLocation, (float)delta_us/1000000.0);
+        glUniform1f(timeLocation, (float)glfw_time);
+        glUniform1f(timeDeltaLocation, (float)delta);
         glUniform1f(batteryLevelLocation, (float)battery_level);
         glUniform1f(localTimeLocation, (float)local_time);
 
