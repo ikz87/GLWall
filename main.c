@@ -262,6 +262,14 @@ int main(int argc, char *argv[]) {
     signal(SIGUSR1, pause_signal);
     signal(SIGUSR2, unpause_signal);
 
+    // Time for frame limiter
+    double frame_time = 0;
+    double time_cyclic = 0;
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    unsigned int delta_us = 0;
+    double delta = delta_us;
+
     // Some more miscellaneous vars for uniforms
     int battery_level = 0;
     float local_time = 0;
@@ -269,12 +277,11 @@ int main(int argc, char *argv[]) {
 
     // Render loop
     int frame = 0;
-    float clamped_time = 0.0;
-    float time_delta = 0.0;
     while (!glfwWindowShouldClose(window)) {
         if (paused) {
             pause();
         }
+        clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 
         // Get window size
         int width, height;
@@ -333,18 +340,11 @@ int main(int argc, char *argv[]) {
 
         }
 
-        // Keep GLFW time in a 60 second interval so it doesn't
-        // cause any floating point precision error thingies
-        time_delta = fmod(glfwGetTime(), 60.0) - clamped_time; 
-        if (time_delta < 0) { time_delta += 60; }
-        clamped_time += time_delta;
-        glfwSetTime(clamped_time);
-
         // Pass the window width and time to the shaderglUniform3f(resolutionLocation, (float)width, (float)height, 1.0f);
         glUniform3f(resolutionLocation, (float)width, (float)height, 1.0f);
         glUniform4f(mouseLocation, (float)mouseX, (float)mouseY, (float)0.0, (float)0.0);
-        glUniform1f(timeLocation, clamped_time);
-        glUniform1f(timeDeltaLocation, (float)1.0/FRAME_LIMIT);
+        glUniform1f(timeLocation, (float)glfwGetTime());
+        glUniform1f(timeDeltaLocation, (float)delta_us/1000000.0);
         glUniform1f(batteryLevelLocation, (float)battery_level);
         glUniform1f(localTimeLocation, (float)local_time);
 
@@ -358,13 +358,24 @@ int main(int argc, char *argv[]) {
         // Poll for and process events
         glfwPollEvents();
 
+                clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+        delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
 
         if (FRAME_LIMIT > 0)
         {
-            if ( time_delta < 1.0 / FRAME_LIMIT)
+            if (delta_us < 1000000.0 / FRAME_LIMIT)
             {
-                usleep((1.0 / FRAME_LIMIT - time_delta) * 1000000.0);
+                usleep(1000000.0 / FRAME_LIMIT - delta_us);
+                delta = 1.0 / FRAME_LIMIT;
             }
+            else
+            {
+                delta = delta_us/1000000.0;
+            }
+        }
+        else
+        {
+            delta = delta_us/1000000.0;
         }
         frame = (frame + 1) % FRAME_LIMIT;
     }
