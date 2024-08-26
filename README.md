@@ -4,6 +4,7 @@
 You'll have to install the following C libraries:
 - [glfw](https://archlinux.org/packages/extra/x86_64/glfw/)
 - [stb](https://archlinux.org/packages/extra/any/stb/)
+- [glew](https://archlinux.org/packages/extra/x86_64/glew/)
 
 Then, make sure you have gcc installed and run `make`
 
