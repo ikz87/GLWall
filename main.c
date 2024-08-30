@@ -123,7 +123,10 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Failed to initialize GLFW\n");
         return -1;
     }
-    
+
+    // Set the window class for Wayland
+    glfwWindowHintString(GLFW_WAYLAND_APP_ID, "GLWall");
+
     // Create a GLFW window
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "GLWall", NULL, NULL);
     if (!window) {
