@@ -125,7 +125,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Set the window class for Wayland
-    glfwWindowHintString(GLFW_WAYLAND_APP_ID, "GLWall");
+    const char* app_id = getenv("GLWALL_CLASS");
+    if (!app_id) app_id = "GLWall";
+    glfwWindowHintString(GLFW_WAYLAND_APP_ID, app_id);
 
     // Create a GLFW window
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "GLWall", NULL, NULL);
